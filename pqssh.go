@@ -19,13 +19,14 @@ import (
 
 // Driver is authentication provider information.
 type Driver struct {
-	Hostname   string `json:"hostname"`
-	Port       int    `json:"port"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	PrivateKey string `json:"privateKey"`
-	client     *ssh.Client
-	agent      agent.Agent
+	Hostname    string `json:"hostname"`
+	Port        int    `json:"port"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	PrivateKey  string `json:"privateKey"`
+	client      *ssh.Client
+	agent       agent.Agent
+	EnableAgent bool
 }
 
 // Open opens connection to the server.
@@ -36,9 +37,11 @@ func (d *Driver) Open(s string) (driver.Conn, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	if conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-		defer conn.Close()
-		sshConfig.Auth = append(sshConfig.Auth, ssh.PublicKeysCallback(agent.NewClient(conn).Signers))
+	if d.EnableAgent {
+		if conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
+			defer conn.Close()
+			sshConfig.Auth = append(sshConfig.Auth, ssh.PublicKeysCallback(agent.NewClient(conn).Signers))
+		}
 	}
 
 	if d.PrivateKey != "" {
